@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Connection Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-box {
+            background: white;
+            padding: 20px;
+            margin: 10px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .success { color: #28a745; }
+        .error { color: #dc3545; }
+        .info { color: #007bff; }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #0056b3; }
+        pre {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-size: 12px;
+        }
+        .status { font-weight: bold; padding: 5px; }
+        input {
+            width: 100%;
+            padding: 8px;
+            margin: 5px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔧 API Connection Diagnostic Tool</h1>
+
+    <div class="test-box">
+        <h3>Test 1: Check Backend API</h3>
+        <button onclick="testBackend()">Test Backend Connection</button>
+        <div id="backend-result"></div>
+    </div>
+
+    <div class="test-box">
+        <h3>Test 2: Test Products Endpoint</h3>
+        <button onclick="testProducts()">Test GET /products</button>
+        <div id="products-result"></div>
+    </div>
+
+    <div class="test-box">
+        <h3>Test 3: Test Registration</h3>
+        <input type="text" id="test-name" placeholder="Name" value="Test User">
+        <input type="email" id="test-email" placeholder="Email (must be unique!)" value="">
+        <input type="password" id="test-password" placeholder="Password" value="password123">
+        <button onclick="testRegistration()">Test Registration</button>
+        <div id="registration-result"></div>
+    </div>
+
+    <div class="test-box">
+        <h3>Configuration Info</h3>
+        <div id="config-info"></div>
+    </div>
+
+    <script>
+        // Generate random email
+        document.getElementById('test-email').value = 'test' + Math.floor(Math.random() * 10000) + '@example.com';
+
+        const API_BASE_URL = 'http://localhost/tbecommerce/public/api/v1';
+
+        function log(elementId, message, type = 'info') {
+            const element = document.getElementById(elementId);
+            const className = type === 'success' ? 'success' : type === 'error' ? 'error' : 'info';
+            element.innerHTML += `<div class="${className}">${message}</div>`;
+        }
+
+        function logPre(elementId, data) {
+            const element = document.getElementById(elementId);
+            element.innerHTML += `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+        }
+
+        async function testBackend() {
+            const resultDiv = document.getElementById('backend-result');
+            resultDiv.innerHTML = '<div class="info">Testing backend connection...</div>';
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/products`);
+
+                log('backend-result', `Status: ${response.status} ${response.statusText}`,
+                    response.ok ? 'success' : 'error');
+
+                const data = await response.json();
+                log('backend-result', '✅ Backend is accessible and responding!', 'success');
+                logPre('backend-result', { status: data.status, message: data.message });
+
+            } catch (error) {
+                log('backend-result', '❌ Cannot connect to backend!', 'error');
+                log('backend-result', `Error: ${error.message}`, 'error');
+                log('backend-result', 'Possible causes:', 'info');
+                log('backend-result', '1. XAMPP Apache not running', 'info');
+                log('backend-result', '2. Wrong API URL', 'info');
+                log('backend-result', '3. CORS not configured', 'info');
+            }
+        }
+
+        async function testProducts() {
+            const resultDiv = document.getElementById('products-result');
+            resultDiv.innerHTML = '<div class="info">Testing products endpoint...</div>';
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/products`, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
+
+                log('products-result', `Status: ${response.status}`, response.ok ? 'success' : 'error');
+
+                const data = await response.json();
+
+                if (response.ok && data.status === 'success') {
+                    log('products-result', '✅ Products endpoint working!', 'success');
+                    log('products-result', `Found ${data.data.products.length} products`, 'info');
+                    logPre('products-result', data.data.products.slice(0, 2)); // Show first 2 products
+                } else {
+                    log('products-result', '❌ Products endpoint error', 'error');
+                    logPre('products-result', data);
+                }
+
+            } catch (error) {
+                log('products-result', '❌ Failed to fetch products', 'error');
+                log('products-result', error.message, 'error');
+            }
+        }
+
+        async function testRegistration() {
+            const resultDiv = document.getElementById('registration-result');
+            resultDiv.innerHTML = '<div class="info">Testing registration endpoint...</div>';
+
+            const name = document.getElementById('test-name').value;
+            const email = document.getElementById('test-email').value;
+            const password = document.getElementById('test-password').value;
+
+            const payload = {
+                name: name,
+                email: email,
+                password: password,
+                password_confirm: password
+            };
+
+            log('registration-result', 'Sending registration request...', 'info');
+            logPre('registration-result', payload);
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/auth/register`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                log('registration-result', `Status: ${response.status} ${response.statusText}`,
+                    response.ok ? 'success' : 'error');
+
+                const data = await response.json();
+
+                if (response.ok && data.status === 'success') {
+                    log('registration-result', '✅ Registration successful!', 'success');
+                    log('registration-result', `User ID: ${data.data.user.id}`, 'success');
+                    log('registration-result', `Email: ${data.data.user.email}`, 'success');
+                    log('registration-result', `Token received: ${data.data.token.substring(0, 50)}...`, 'success');
+
+                    // Test storing in localStorage
+                    localStorage.setItem('test_token', data.data.token);
+                    localStorage.setItem('test_user', JSON.stringify(data.data.user));
+                    log('registration-result', '✅ Token saved to localStorage', 'success');
+
+                    logPre('registration-result', data);
+
+                } else {
+                    log('registration-result', '❌ Registration failed', 'error');
+                    log('registration-result', data.message || 'Unknown error', 'error');
+                    logPre('registration-result', data);
+                }
+
+            } catch (error) {
+                log('registration-result', '❌ Registration request failed', 'error');
+                log('registration-result', error.message, 'error');
+                log('registration-result', 'Check:', 'info');
+                log('registration-result', '1. Is backend running?', 'info');
+                log('registration-result', '2. Is CORS enabled?', 'info');
+                log('registration-result', '3. Is the email unique?', 'info');
+            }
+        }
+
+        // Show configuration info
+        const configDiv = document.getElementById('config-info');
+        configDiv.innerHTML = `
+            <div><strong>API Base URL:</strong> <code>${API_BASE_URL}</code></div>
+            <div><strong>Current Origin:</strong> <code>${window.location.origin}</code></div>
+            <div><strong>Current URL:</strong> <code>${window.location.href}</code></div>
+            <div><strong>Browser:</strong> ${navigator.userAgent}</div>
+        `;
+
+        // Auto-run backend test on load
+        window.addEventListener('load', () => {
+            console.log('API Diagnostic Tool loaded');
+            console.log('API URL:', API_BASE_URL);
+        });
+    </script>
+</body>
+</html>
