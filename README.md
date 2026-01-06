@@ -1,3 +1,5 @@
+import databasenya
+
 git clone https://github.com/jikipadila1/tb-pak-sandi-ecommerce.git
 
 # Masuk ke direktori frontend
